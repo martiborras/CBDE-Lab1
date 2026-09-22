@@ -2,3 +2,4 @@ datasets==3.6.0
 huggingface-hub==0.33.2
 psycopg2-binary==2.9.13
 python-dotenv==1.2.3
+chromadb==1.5.9

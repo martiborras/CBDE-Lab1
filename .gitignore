@@ -18,3 +18,4 @@ Thumbs.db
 
 # Local databases / Chroma persistence
 chroma_db/
+chroma_db_batch_test/

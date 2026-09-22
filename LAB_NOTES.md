@@ -341,3 +341,18 @@ For the mandatory AI appendix, the final report should synthesize:
 4. which design decisions were ultimately taken by the team.
 
 Full prompts do not need to be reproduced.
+
+---
+
+## C0 implementation comparison
+
+The first C0 implementation inserted documents individually into Chroma.
+Although this approach was conceptually similar to PostgreSQL P0, the execution
+time was very high.
+
+A second implementation was tested using batch insertion (100 documents per
+operation). This reduced the execution time by approximately four times.
+
+The final implementation strategy will be decided after discussing whether
+the objective is to maximize comparability with PostgreSQL or represent a more
+realistic Chroma loading workflow.

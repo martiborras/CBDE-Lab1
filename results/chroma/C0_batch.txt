@@ -1,0 +1,38 @@
+C0 — Chroma batch insertion experiment
+
+Dataset:
+- File: data/bookcorpus_10000.csv
+- Sentences: 10,000
+
+Environment:
+- Windows host + WSL2
+- Ubuntu 24.04
+- Python 3.12.3
+- ChromaDB 1.5.9
+
+Methodology:
+- Same dataset and sentence split as PostgreSQL P0.
+- Documents inserted using batches.
+- Batch size: 100 sentences.
+- Default Chroma embedding function:
+  all-MiniLM-L6-v2
+- Persistent Chroma storage.
+
+Results:
+
+Inserted sentences: 10000
+
+Number of batches: 100
+Batch size: 100
+
+Minimum batch insertion time: 5.076324 s
+Maximum batch insertion time: 9.941146 s
+Average batch insertion time: 6.436071 s
+Standard deviation: 0.729415 s
+
+Approximate total execution time:
+643.607 seconds (~10.7 minutes)
+
+Observation:
+Batch insertion reduced the execution time compared with individual
+insertions. However, the main cost remains the embedding generation process.
