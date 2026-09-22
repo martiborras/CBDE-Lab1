@@ -341,3 +341,65 @@ For the mandatory AI appendix, the final report should synthesize:
 4. which design decisions were ultimately taken by the team.
 
 Full prompts do not need to be reproduced.
+
+---
+
+## 13. Multi-machine experimental methodology
+
+The experiments will be reproduced independently on two development machines,
+one used by Bernat and one used by Martí.
+
+The objective of using two machines is not to compare their absolute execution
+times directly, since differences in hardware, operating-system scheduling,
+I/O activity and other runtime conditions may affect performance.
+
+Instead, each machine will execute the complete PostgreSQL and Chroma
+experiments using the same dataset, scripts and general methodology.
+
+Performance comparisons will therefore be made within each machine:
+
+- PostgreSQL vs Chroma on Bernat's machine.
+- PostgreSQL vs Chroma on Martí's machine.
+
+Results obtained on different machines will not be directly compared as if the
+difference were caused by the database technology.
+
+Using two independent environments will allow us to check whether the same
+general trends are reproduced across different machines.
+
+Raw experimental results will be stored separately under:
+
+- `results/bernat/`
+- `results/marti/`
+
+The `LAB_NOTES.md` file will contain the methodological decisions,
+interpretation of the results, relevant problems encountered and conclusions.
+
+### Bernat — P0 repeated experiment
+
+P0 was reproduced on Bernat's machine using the same fixed dataset of
+10,000 sentences.
+
+Five complete executions were performed.
+
+Average insertion times:
+
+- Run 1: 1.262 ms
+- Run 2: 1.263 ms
+- Run 3: 1.332 ms
+- Run 4: 1.234 ms
+- Run 5: 1.305 ms
+
+The mean of the five run averages was approximately 1.279 ms per sentence.
+
+The average times were relatively stable across executions, although isolated
+higher-latency insertions were observed. The largest individual insertion time
+was 40.271 ms.
+
+These results are stored in:
+
+`results/bernat/postgresql/P0.txt`
+
+No direct performance comparison will be made with P0 results obtained on
+Martí's machine because the experiments were executed on different hardware
+and runtime environments.
