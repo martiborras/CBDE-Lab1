@@ -1,0 +1,24 @@
+PostgreSQL P1 - Embedding storage
+
+Model: all-MiniLM-L6-v2
+Sentences: 10000
+Embedding dimensions: 384
+PostgreSQL datatype: DOUBLE PRECISION[]
+
+Timing methodology:
+- Embeddings are generated before starting the timer.
+- The measured operation includes UPDATE + COMMIT for one embedding.
+- One embedding is stored per operation.
+
+Results:
+Stored embeddings: 10000
+Minimum storage time: 0.003174 s
+Maximum storage time: 0.049861 s
+Average storage time: 0.004681 s
+Standard deviation: 0.001827 s
+
+Validation:
+- Total sentences: 10000
+- Sentences with embedding: 10000
+- Minimum embedding dimensions: 384
+- Maximum embedding dimensions: 384

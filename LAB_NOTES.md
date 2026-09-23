@@ -403,3 +403,70 @@ These results are stored in:
 No direct performance comparison will be made with P0 results obtained on
 Martí's machine because the experiments were executed on different hardware
 and runtime environments.
+
+---
+
+## 14. PostgreSQL P1 - Embedding generation and storage
+
+### Embedding model
+
+The selected embedding model is `all-MiniLM-L6-v2`, following the lightweight transformer recommendation in the lab statement.
+
+The model was loaded using `sentence-transformers`.
+
+A preliminary test confirmed that each sentence is transformed into an embedding with 384 dimensions.
+
+### PostgreSQL representation
+
+Pgvector cannot be used in the mandatory PostgreSQL part of the lab.
+
+Therefore, the `sentences` table was extended with:
+
+`embedding DOUBLE PRECISION[]`
+
+This allows PostgreSQL to store the 384 floating-point values of each embedding using a native PostgreSQL array.
+
+This representation is convenient for storage but does not provide native vector-distance operators or specialized vector indexing. This decision will be especially relevant when implementing P2 and discussing the vector-data impedance mismatch.
+
+### P1 methodology
+
+For every sentence already stored in PostgreSQL:
+
+1. Read its `id` and textual content.
+2. Generate its embedding using `all-MiniLM-L6-v2`.
+3. Convert the resulting NumPy array to a Python list.
+4. Update the corresponding PostgreSQL row.
+5. Commit the operation.
+
+Embedding generation is performed outside the measured section.
+
+The timer measures the SQL `UPDATE` that stores one embedding and the corresponding `COMMIT`.
+
+This maintains a per-element baseline similar to P0.
+
+### P1 results - Martí machine
+
+10,000 embeddings were stored.
+
+- Minimum storage time: 0.003174 s
+- Maximum storage time: 0.049861 s
+- Average storage time: 0.004681 s
+- Standard deviation: 0.001827 s
+
+### Validation
+
+A SQL validation query confirmed:
+
+- Total sentences: 10,000
+- Sentences with an embedding: 10,000
+- Minimum embedding dimensionality: 384
+- Maximum embedding dimensionality: 384
+
+Therefore, every sentence has a complete 384-dimensional embedding stored in PostgreSQL.
+
+### Points to revisit
+
+- Repeat P1 several times if repeated-run measurements are required for the final experimental methodology.
+- Compare individual commits with optimized insertion/update strategies.
+- Evaluate the difficulty and performance of computing vector distances over `DOUBLE PRECISION[]` in P2.
+- Compare this representation with Chroma's native vector handling.
