@@ -608,3 +608,146 @@ this experiment.
 - This is an example of the impedance mismatch studied in the laboratory.
 - Chroma C2 must reuse exactly the same 10 query IDs and, where possible, the
   same distance metrics for a fair comparison.
+
+## 16. Chroma implementation: C0, C1 and C2
+
+### Final experimental methodology
+
+For the final performance comparison, all PostgreSQL and Chroma timing experiments will be executed on the same computer.
+
+The scripts may be developed and functionally validated on different machines, but the timing values used in the final report must come from one machine in order to avoid hardware differences affecting the PostgreSQL vs. Chroma comparison.
+
+The final experiment should therefore execute on the same machine:
+
+- P0
+- P1
+- P2
+- C0
+- C0_batch (supplementary experiment)
+- C1
+- C2
+
+All experiments use the same fixed dataset of 10,000 BookCorpus sentences.
+
+### C0 - Chroma document insertion
+
+C0 was initially implemented by Bernat and later integrated into the main development branch.
+
+Input:
+- data/bookcorpus_10000.csv
+- Same 10,000 sentences used by PostgreSQL P0.
+
+Implementation:
+- A local persistent Chroma database is used.
+- The previous collection is deleted before every experiment.
+- Chroma's DefaultEmbeddingFunction is explicitly configured.
+- The embedding function is warmed up before measurements.
+- Sentences are inserted individually using collection.add(), passing the sentence ID and document text.
+
+Important methodological observation:
+
+No explicit embedding is passed to collection.add(). Therefore, Chroma automatically generates an embedding for each document using its configured embedding function.
+
+Consequently, the measured C0 insertion time is not a pure text-storage time. It includes the work performed internally by Chroma when a document is added, including embedding generation and vector persistence/indexing.
+
+This behavior is relevant to CQ1, which asks whether text insertion and embedding creation can be measured separately in Chroma.
+
+### C0 batch experiment
+
+An additional C0_batch.py script was retained as a supplementary experiment.
+
+Instead of performing one collection.add() call per sentence, it inserts batches of 100 sentences.
+
+This experiment can be used to study the effect of batching on insertion performance.
+
+Batch latency must not be directly compared with individual sentence latency. For the final analysis, batch results should also be expressed using a normalized measure such as average time per sentence and/or sentences inserted per second.
+
+C0_batch.py is supplementary and does not replace the required C0 script.
+
+### C1 - Explicit embedding generation and storage in Chroma
+
+C1 explicitly generates the embeddings before inserting them into Chroma.
+
+Embedding model:
+- all-MiniLM-L6-v2
+- 384 dimensions
+- Same model used in PostgreSQL P1.
+
+For each sentence:
+
+1. Generate the embedding explicitly with SentenceTransformer.
+2. Pass the generated vector explicitly to Chroma.
+3. Store the document and embedding together.
+
+Two timings are measured separately:
+
+1. Embedding generation time.
+2. Embedding storage time in Chroma.
+
+The model is warmed up before measurements so that model initialization is not included in the first measured embedding generation.
+
+This explicit separation will help answer CQ1 and distinguish the cost of generating an embedding from the cost of storing an already generated vector.
+
+C1 has been syntax-validated but the definitive 10,000-sentence timing experiment is still pending.
+
+### C2 - Chroma similarity search
+
+C2 uses the embeddings generated and stored by C1.
+
+The same 10 fixed query IDs used by PostgreSQL P2 are reused:
+
+0, 1010, 2001, 3014, 4004, 5003, 6003, 7001, 8003, 9003
+
+Two Chroma collections are created from exactly the same documents and embeddings:
+
+- One configured for L2 distance.
+- One configured for cosine distance.
+
+This is necessary because the vector distance space is part of the Chroma collection/index configuration.
+
+For each of the 10 query sentences:
+
+1. Use its existing embedding.
+2. Query the L2 collection.
+3. Query the cosine collection.
+4. Exclude the query sentence itself.
+5. Keep the two closest other sentences.
+
+Three neighbors are initially requested because the query sentence itself is expected to be the closest vector.
+
+The measured query time includes the Chroma vector query and the small amount of result processing needed to remove the query itself and obtain the top-2.
+
+Collection creation and the initial loading of the 10,000 vectors into the C2 collections are outside the query timing.
+
+For each metric, C2 reports:
+
+- Minimum query time.
+- Maximum query time.
+- Average query time.
+- Standard deviation.
+
+C2 has been syntax-validated but its definitive experiment is still pending.
+
+### PostgreSQL P2 vs. Chroma C2 conceptual difference
+
+PostgreSQL P2 stores embeddings as PostgreSQL DOUBLE PRECISION[] arrays.
+
+Without Pgvector, PostgreSQL does not provide the specialized vector-distance operators and indexes that would naturally represent this operation. Therefore, P2 retrieves the embeddings and performs the exhaustive similarity computation explicitly in Python/NumPy.
+
+Chroma, in contrast, is designed around vector storage and similarity search. C2 sends the query embedding to Chroma and uses the collection's vector-search functionality directly.
+
+This difference is central to the final impedance-mismatch discussion.
+
+The timing methodologies are not identical low-level operations. Therefore, the final report must clearly explain what each measurement includes rather than presenting the numbers as if both systems executed exactly the same internal algorithm.
+
+### Pending before final report
+
+- Execute all definitive timing experiments on the same computer.
+- Save the final results.
+- Compare C0 individual insertion with C0 batch insertion.
+- Compare PostgreSQL and Chroma embedding-storage behavior.
+- Compare P2 and C2 query timings and returned neighbors.
+- Complete PQ1 and CQ1 using the final measurements.
+- Write the PostgreSQL vs. Chroma impedance-mismatch discussion.
+- Review and update requirements.txt.
+- Make sure all required scripts are reproducible from a clean environment.
