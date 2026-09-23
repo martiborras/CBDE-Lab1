@@ -1,0 +1,48 @@
+PostgreSQL P2 - Top-2 similarity search
+
+Dataset:
+- BookCorpus
+- 10,000 sentences
+
+Embedding model:
+- all-MiniLM-L6-v2
+- 384 dimensions
+
+Query sentence IDs:
+0, 1010, 2001, 3014, 4004, 5003, 6003, 7001, 8003, 9003
+
+Distance metrics:
+- Euclidean distance
+- Cosine distance
+
+Methodology:
+- Embeddings are stored in PostgreSQL as DOUBLE PRECISION[].
+- The embeddings are retrieved from PostgreSQL and similarity computation is performed in Python using NumPy.
+- For each query sentence, the query itself is excluded.
+- Each query is compared exhaustively against the other 9,999 sentences.
+- The results are sorted by ascending distance and the two closest sentences are selected.
+- Query timings measure distance computation, sorting and top-2 selection.
+- The initial retrieval of the 10,000 embeddings from PostgreSQL is not included in the query timings.
+
+Euclidean distance timing:
+Minimum: 0.292067 s
+Maximum: 0.453680 s
+Average: 0.365925 s
+Standard deviation: 0.066833 s
+
+Cosine distance timing:
+Minimum: 0.338566 s
+Maximum: 0.411857 s
+Average: 0.363042 s
+Standard deviation: 0.022566 s
+
+Observations:
+- Both distance metrics returned exactly the same top-2 sentences, in the same order, for all 10 query sentences.
+- The distance values themselves are different.
+- The tested embeddings have norms extremely close to 1.
+- For unit-normalized vectors, squared Euclidean distance is equal to two times cosine distance:
+  Euclidean_distance^2 = 2 * Cosine_distance
+- This explains why both metrics produce the same ranking in these experiments.
+- Average query times are very similar for both metrics.
+- Cosine showed lower timing variability in this run.
+- Without Pgvector, PostgreSQL stores the embeddings as regular arrays and does not provide the specialized vector-distance operators/indexes used in a vector database. Similarity computation is therefore implemented explicitly in Python for this experiment.

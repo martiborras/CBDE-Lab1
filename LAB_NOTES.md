@@ -470,3 +470,141 @@ Therefore, every sentence has a complete 384-dimensional embedding stored in Pos
 - Compare individual commits with optimized insertion/update strategies.
 - Evaluate the difficulty and performance of computing vector distances over `DOUBLE PRECISION[]` in P2.
 - Compare this representation with Chroma's native vector handling.
+
+## 15. PostgreSQL P2 - Top-2 similarity search
+
+### Objective
+
+For 10 fixed and clearly identified sentences, find the top-2 most similar
+sentences among the other 9,999 sentences using two different distance metrics.
+
+The same query sentence IDs will later be reused in Chroma C2 to make the
+comparison reproducible and fair.
+
+### Query sentence selection
+
+One sentence was selected from approximately each 1,000-sentence region of
+the dataset in order to obtain a deterministic and distributed sample.
+
+Query IDs:
+
+- 0
+- 1010
+- 2001
+- 3014
+- 4004
+- 5003
+- 6003
+- 7001
+- 8003
+- 9003
+
+### Distance metrics
+
+Two metrics were implemented:
+
+1. Euclidean distance
+2. Cosine distance
+
+For both metrics, a smaller distance means that two embeddings are considered
+more similar.
+
+The query sentence itself is excluded from the candidate sentences.
+
+### Implementation
+
+PostgreSQL stores the embeddings as `DOUBLE PRECISION[]`.
+
+Since Pgvector cannot be used in this part of the laboratory, similarity
+computation is implemented explicitly in Python using NumPy.
+
+The script:
+
+1. Retrieves the embeddings stored in PostgreSQL.
+2. Takes each of the 10 selected query sentences.
+3. Compares its embedding exhaustively against the other 9,999 embeddings.
+4. Computes the distance using Euclidean or Cosine distance.
+5. Sorts the candidates by ascending distance.
+6. Selects the first two results.
+
+This implementation also illustrates the impedance mismatch: PostgreSQL can
+store the vector representation using a generic array, but it does not provide
+the specialized vector operators and vector indexes that a vector database
+provides.
+
+### Timing methodology
+
+The two metrics are timed separately.
+
+For each query, the measured operation includes:
+
+- computation of the 9,999 distances;
+- sorting the candidates;
+- selection of the top-2 results.
+
+The initial retrieval of all embeddings from PostgreSQL is outside the timed
+region.
+
+Therefore, the reported times represent the similarity-search computation
+implemented in Python and should not be interpreted as PostgreSQL-native vector
+query execution times.
+
+### Euclidean distance results
+
+- Minimum: 0.292067 s
+- Maximum: 0.453680 s
+- Average: 0.365925 s
+- Standard deviation: 0.066833 s
+
+### Cosine distance results
+
+- Minimum: 0.338566 s
+- Maximum: 0.411857 s
+- Average: 0.363042 s
+- Standard deviation: 0.022566 s
+
+Both metrics have a very similar average execution time in this experiment.
+Cosine distance showed lower timing variability in this run.
+
+### Comparison between Euclidean and Cosine results
+
+For all 10 query sentences, Euclidean and Cosine returned exactly the same
+top-2 sentences in exactly the same order.
+
+The numerical distance values are different, but the ranking is identical.
+
+To investigate this result, the norms of several stored embeddings were
+measured:
+
+- ID 0: 0.9999999453
+- ID 1010: 0.9999999716
+- ID 2001: 1.0000000262
+- ID 5003: 0.9999999962
+- ID 9003: 1.0000000527
+
+Therefore, the embeddings are effectively unit-normalized.
+
+For unit vectors:
+
+    Euclidean_distance^2 = 2 * Cosine_distance
+
+Consequently, Euclidean and Cosine distance are monotonic transformations of
+each other for these embeddings and therefore produce the same ranking.
+
+This does not mean that Euclidean and Cosine distance are equivalent in
+general. The result follows from the normalization of the embeddings used in
+this experiment.
+
+### Points for PQ1 / final discussion
+
+- Query times are reasonably close across the 10 queries, although Euclidean
+  showed more variability than Cosine in this run.
+- Both metrics produced identical rankings because the embeddings are
+  effectively unit-normalized.
+- PostgreSQL without Pgvector has no native vector datatype/operator/index
+  specialized for this similarity-search workload.
+- The current solution retrieves generic arrays and explicitly computes
+  similarities in Python.
+- This is an example of the impedance mismatch studied in the laboratory.
+- Chroma C2 must reuse exactly the same 10 query IDs and, where possible, the
+  same distance metrics for a fair comparison.
