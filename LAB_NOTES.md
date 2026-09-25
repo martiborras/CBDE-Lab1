@@ -688,7 +688,11 @@ The model is warmed up before measurements so that model initialization is not i
 
 This explicit separation will help answer CQ1 and distinguish the cost of generating an embedding from the cost of storing an already generated vector.
 
-C1 has been syntax-validated but the definitive 10,000-sentence timing experiment is still pending.
+C1 has been executed successfully using the definitive 10,000-sentence experiment.
+
+The final measurements are stored in:
+
+`results/chroma/C1.txt`
 
 ### C2 - Chroma similarity search
 
@@ -726,7 +730,11 @@ For each metric, C2 reports:
 - Average query time.
 - Standard deviation.
 
-C2 has been syntax-validated but its definitive experiment is still pending.
+C2 has been executed successfully using the definitive experiment.
+
+The final measurements are stored in:
+
+`results/chroma/C2.txt`
 
 ### PostgreSQL P2 vs. Chroma C2 conceptual difference
 
@@ -740,14 +748,31 @@ This difference is central to the final impedance-mismatch discussion.
 
 The timing methodologies are not identical low-level operations. Therefore, the final report must clearly explain what each measurement includes rather than presenting the numbers as if both systems executed exactly the same internal algorithm.
 
-### Pending before final report
+### Final experimental state
 
-- Execute all definitive timing experiments on the same computer.
-- Save the final results.
-- Compare C0 individual insertion with C0 batch insertion.
-- Compare PostgreSQL and Chroma embedding-storage behavior.
-- Compare P2 and C2 query timings and returned neighbors.
-- Complete PQ1 and CQ1 using the final measurements.
-- Write the PostgreSQL vs. Chroma impedance-mismatch discussion.
-- Review and update requirements.txt.
-- Make sure all required scripts are reproducible from a clean environment.
+All definitive experiments have been executed on the same development machine.
+
+Completed experiments:
+
+- PostgreSQL:
+  - P0 — Text insertion
+  - P1 — Embedding storage
+  - P2 — Similarity search
+
+- Chroma:
+  - C0 — Batch insertion experiments
+  - C1 — Explicit embedding generation and storage
+  - C2 — Similarity search using HNSW indexes
+
+Final results are stored in:
+
+- `results/postgresql/`
+- `results/chroma/`
+
+The remaining work before the final report is:
+
+- Write the PostgreSQL vs Chroma comparison.
+- Answer PQ1 and CQ1 using the final measurements.
+- Discuss the impedance mismatch between relational and vector databases.
+- Complete the AI usage appendix.
+- Perform a final reproducibility check from a clean environment.
