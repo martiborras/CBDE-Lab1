@@ -1,0 +1,59 @@
+C0 — Chroma batch insertion experiment
+
+Dataset:
+- File: data/bookcorpus_10000.csv
+- Sentences: 10,000
+- Same fixed dataset used throughout the experiments
+
+Environment:
+- Windows host + WSL2
+- Ubuntu 24.04 LTS
+- Python 3.12.3
+- ChromaDB 1.5.9
+
+Methodology:
+- Documents were inserted into Chroma using batch insertion.
+- Batch size: 1000 documents.
+- Chroma's default embedding function was used:
+  all-MiniLM-L6-v2
+- The embedding model was warmed up before measurements.
+- The warm-up time was therefore excluded from the experiment.
+- The Chroma collection was recreated empty before each execution.
+- Ten batches were used in each execution.
+
+Execution 1:
+- Inserted sentences: 10,000
+- Batches: 10
+- Total execution time: 556.383461 s
+- Average time per sentence: 0.055638 s
+- Minimum batch insertion time: 51.579996 s
+- Maximum batch insertion time: 61.642277 s
+- Average batch insertion time: 55.636385 s
+- Standard deviation: 2.983184 s
+
+Execution 2:
+- Inserted sentences: 10,000
+- Batches: 10
+- Total execution time: 536.973296 s
+- Average time per sentence: 0.053697 s
+- Minimum batch insertion time: 52.102336 s
+- Maximum batch insertion time: 58.305221 s
+- Average batch insertion time: 53.694818 s
+- Standard deviation: 1.729304 s
+
+Execution 3:
+- Inserted sentences: 10,000
+- Batches: 10
+- Total execution time: 525.298745 s
+- Average time per sentence: 0.052530 s
+- Minimum batch insertion time: 50.239233 s
+- Maximum batch insertion time: 53.698954 s
+- Average batch insertion time: 52.527737 s
+- Standard deviation: 0.960212 s
+
+Observation:
+- Considerable variation was observed between executions.
+- Therefore, a single execution should not be used to determine the
+  optimal batch size.
+- The three executions produced total times in the range of
+  approximately 525–556 seconds.

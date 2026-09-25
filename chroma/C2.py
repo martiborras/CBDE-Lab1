@@ -17,20 +17,38 @@ QUERY_IDS = [
     9003,
 ]
 
+
 CHROMA_PATH = "chroma_db/c1"
+
 SOURCE_COLLECTION = "bookcorpus_c1"
 
 L2_COLLECTION = "bookcorpus_c2_l2"
 COSINE_COLLECTION = "bookcorpus_c2_cosine"
 
+BATCH_SIZE = 5000
+
+
+def add_in_batches(collection, ids, documents, embeddings):
+    """
+    Add vectors to Chroma in batches because Chroma has a maximum
+    batch size limit for a single add() operation.
+    """
+
+    for start in range(0, len(ids), BATCH_SIZE):
+        end = start + BATCH_SIZE
+
+        collection.add(
+            ids=ids[start:end],
+            documents=documents[start:end],
+            embeddings=embeddings[start:end],
+        )
+
 
 def get_top_2(collection, query_id, query_embedding):
     """
-    Query Chroma for the closest vectors.
-
-    We request 3 results because the query sentence itself is expected
-    to be the closest result. It is explicitly removed afterwards.
+    Query Chroma for the closest vectors and remove the query itself.
     """
+
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=3,
@@ -58,10 +76,11 @@ def get_top_2(collection, query_id, query_embedding):
 
 
 def main():
-    client = chromadb.PersistentClient(path=CHROMA_PATH)
 
-    # C1 contains the same 10,000 sentences and their explicitly
-    # generated all-MiniLM-L6-v2 embeddings.
+    client = chromadb.PersistentClient(
+        path=CHROMA_PATH
+    )
+
     source_collection = client.get_collection(
         name=SOURCE_COLLECTION
     )
@@ -71,23 +90,33 @@ def main():
         f"{source_collection.count()} sentences."
     )
 
-    # Retrieve documents and embeddings generated during C1.
+    # Retrieve embeddings generated during C1
     data = source_collection.get(
-        include=["documents", "embeddings"]
+        include=[
+            "documents",
+            "embeddings",
+        ]
     )
 
     ids = data["ids"]
     documents = data["documents"]
     embeddings = data["embeddings"]
 
-    # Remove previous C2 collections so every execution starts clean.
-    for collection_name in [L2_COLLECTION, COSINE_COLLECTION]:
+
+    # Remove previous C2 collections
+    for collection_name in [
+        L2_COLLECTION,
+        COSINE_COLLECTION,
+    ]:
         try:
-            client.delete_collection(name=collection_name)
+            client.delete_collection(
+                name=collection_name
+            )
         except Exception:
             pass
 
-    # One collection uses Euclidean (L2) distance.
+
+    # Create HNSW index using L2 distance
     l2_collection = client.create_collection(
         name=L2_COLLECTION,
         configuration={
@@ -97,7 +126,8 @@ def main():
         },
     )
 
-    # The other collection uses cosine distance.
+
+    # Create HNSW index using cosine distance
     cosine_collection = client.create_collection(
         name=COSINE_COLLECTION,
         configuration={
@@ -107,27 +137,43 @@ def main():
         },
     )
 
-    print("Creating L2 collection...")
-    l2_collection.add(
-        ids=ids,
-        documents=documents,
-        embeddings=embeddings,
+
+    print("Building L2 HNSW index...")
+
+    add_in_batches(
+        l2_collection,
+        ids,
+        documents,
+        embeddings,
     )
 
-    print("Creating cosine collection...")
-    cosine_collection.add(
-        ids=ids,
-        documents=documents,
-        embeddings=embeddings,
+
+    print("Building cosine HNSW index...")
+
+    add_in_batches(
+        cosine_collection,
+        ids,
+        documents,
+        embeddings,
     )
+
 
     print("C2 collections created successfully.")
 
-    # Obtain the 10 fixed query sentences and embeddings.
+
+    # Retrieve fixed query embeddings
+
     query_data = source_collection.get(
-        ids=[str(query_id) for query_id in QUERY_IDS],
-        include=["documents", "embeddings"],
+        ids=[
+            str(query_id)
+            for query_id in QUERY_IDS
+        ],
+        include=[
+            "documents",
+            "embeddings",
+        ],
     )
+
 
     query_lookup = {}
 
@@ -141,98 +187,129 @@ def main():
             embedding,
         )
 
+
     l2_query_times = []
     cosine_query_times = []
 
+
     for query_id_int in QUERY_IDS:
+
         query_id = str(query_id_int)
 
         query_text, query_embedding = query_lookup[query_id]
 
-        # L2 query
-        l2_start = time.perf_counter()
 
-        l2_top_2 = get_top_2(
+        # L2 query
+
+        start = time.perf_counter()
+
+        l2_results = get_top_2(
             l2_collection,
             query_id,
             query_embedding,
         )
 
-        l2_end = time.perf_counter()
-        l2_query_times.append(l2_end - l2_start)
+        end = time.perf_counter()
+
+        l2_query_times.append(
+            end - start
+        )
+
 
         # Cosine query
-        cosine_start = time.perf_counter()
 
-        cosine_top_2 = get_top_2(
+        start = time.perf_counter()
+
+        cosine_results = get_top_2(
             cosine_collection,
             query_id,
             query_embedding,
         )
 
-        cosine_end = time.perf_counter()
+        end = time.perf_counter()
+
         cosine_query_times.append(
-            cosine_end - cosine_start
+            end - start
         )
+
 
         print("\n" + "=" * 80)
         print(f"Query ID: {query_id}")
         print(f"Query text: {query_text}")
 
+
         print("\nTop-2 using Euclidean (L2) distance:")
 
-        for rank, result in enumerate(l2_top_2, start=1):
+        for rank, result in enumerate(
+            l2_results,
+            start=1
+        ):
             result_id, document, distance = result
 
             print(f"\nRank {rank}")
             print(f"ID: {result_id}")
             print(f"Distance: {distance:.6f}")
             print(f"Text: {document}")
+
 
         print("\nTop-2 using Cosine distance:")
 
-        for rank, result in enumerate(cosine_top_2, start=1):
+        for rank, result in enumerate(
+            cosine_results,
+            start=1
+        ):
             result_id, document, distance = result
 
             print(f"\nRank {rank}")
             print(f"ID: {result_id}")
             print(f"Distance: {distance:.6f}")
             print(f"Text: {document}")
+
 
     print("\n" + "=" * 80)
     print("QUERY TIME STATISTICS")
 
+
     print("\nEuclidean (L2) distance:")
+
     print(
         f"Minimum query time: "
         f"{min(l2_query_times):.6f} s"
     )
+
     print(
         f"Maximum query time: "
         f"{max(l2_query_times):.6f} s"
     )
+
     print(
         f"Average query time: "
         f"{statistics.mean(l2_query_times):.6f} s"
     )
+
     print(
         f"Standard deviation: "
         f"{statistics.stdev(l2_query_times):.6f} s"
     )
 
+
     print("\nCosine distance:")
+
     print(
         f"Minimum query time: "
         f"{min(cosine_query_times):.6f} s"
     )
+
     print(
         f"Maximum query time: "
         f"{max(cosine_query_times):.6f} s"
     )
+
     print(
         f"Average query time: "
         f"{statistics.mean(cosine_query_times):.6f} s"
     )
+
     print(
         f"Standard deviation: "
         f"{statistics.stdev(cosine_query_times):.6f} s"

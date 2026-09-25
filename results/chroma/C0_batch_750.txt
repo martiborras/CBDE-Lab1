@@ -1,0 +1,51 @@
+C0 — Chroma batch insertion experiment
+
+Dataset:
+- File: data/bookcorpus_10000.csv
+- Sentences: 10,000
+- Same fixed dataset used throughout the experiments
+
+Environment:
+- Windows host + WSL2
+- Ubuntu 24.04 LTS
+- Python 3.12.3
+- ChromaDB 1.5.9
+
+Methodology:
+- Documents were inserted into Chroma using batch insertion.
+- Batch size: 750 documents.
+- Chroma's default embedding function was used:
+  all-MiniLM-L6-v2
+- The embedding model was warmed up before measurements.
+- The warm-up time was therefore excluded from the experiment.
+- The Chroma collection was recreated empty before the experiment.
+- The measured total execution time includes embedding generation and
+  insertion/persistence of the 10,000 documents.
+- Since 10,000 is not an exact multiple of 750, the final batch contained
+  250 documents.
+
+Results:
+- Inserted sentences: 10,000
+- Number of batches: 14
+- Batch size: 750
+
+Timing:
+- Total execution time: 535.417497 s
+- Total execution time: approximately 8 min 55 s
+- Average time per sentence: 0.053542 s
+- Minimum batch insertion time: 13.562417 s
+- Maximum batch insertion time: 41.186407 s
+- Average batch insertion time: 38.242432 s
+- Standard deviation: 7.147219 s
+
+Observation:
+- Increasing the batch size from 500 to 750 reduced the total execution
+  time from 543.747450 s to 535.417497 s.
+- This represents an improvement of approximately 1.5%.
+- The improvement is considerably smaller than the improvement obtained
+  when increasing the batch size from 250 to 500.
+- The final batch contained only 250 documents, so the batch-level
+  statistics, especially the standard deviation, should be interpreted
+  with caution.
+- Further experiments with larger batch sizes will determine whether
+  increasing the batch size continues to improve the total execution time.

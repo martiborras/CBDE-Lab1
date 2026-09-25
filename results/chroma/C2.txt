@@ -1,0 +1,46 @@
+C2 — Chroma similarity search experiment
+
+Dataset:
+- File: data/bookcorpus_10000.csv
+- Sentences: 10,000
+- Embedding model: all-MiniLM-L6-v2
+- Embedding dimensions: 384
+
+Environment:
+- Ubuntu 24.04 LTS through WSL2
+- Python 3.12
+- ChromaDB 1.5.9
+
+Methodology:
+- The experiment uses the same 10 fixed query sentences as PostgreSQL P2.
+- The embeddings generated during C1 were reused.
+- Two independent Chroma collections were created:
+  - HNSW index using L2 distance.
+  - HNSW index using cosine distance.
+- The collections were populated using the same embeddings generated in C1.
+- Queries were executed using Chroma's vector search functionality.
+- Query time includes the Chroma collection.query() operation and the
+  extraction of the top-2 results.
+- The creation of the HNSW indexes is not included in query timing.
+
+Results:
+
+Euclidean (L2) distance:
+- Minimum query time: 0.001969 s
+- Maximum query time: 0.005800 s
+- Average query time: 0.002683 s
+- Standard deviation: 0.001118 s
+
+Cosine distance:
+- Minimum query time: 0.001786 s
+- Maximum query time: 0.004426 s
+- Average query time: 0.002573 s
+- Standard deviation: 0.000788 s
+
+Observation:
+- Chroma uses an HNSW vector index to perform similarity search.
+- The query times are considerably lower than the PostgreSQL P2 baseline,
+  where distances were computed externally in Python using a brute-force
+  approach.
+- The results show the advantage of specialized vector indexing for
+  similarity search workloads.
